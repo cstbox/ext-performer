@@ -1,0 +1,15 @@
+/internal-tools/wsfeed.cfg
+assets/
+.fab_tasks~
+cstbox-app-wisdom*
+_build
+edison-*/
+WisdomCA.key
+DEBIAN/control
+RELEASE-VERSION
+.vagrant
+vagrant/cstbox-packages/
+fabfile-settings.py
+/fabfile.py
+build/
+dist/

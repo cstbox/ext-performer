@@ -1,0 +1,9 @@
+Package: cstbox-ext-performer
+Version: %(version)s
+Section: embedded
+Priority: optional
+Architecture: all
+Depends: cstbox-core,cstbox-ext-evtdb
+Maintainer: Eric Pascual <eric.pascual@cstb.fr>
+Description: CSTBox PERFORMER extensions (analytics basis, PDW connectivity,...).
+

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# schedules our analyze tasks if not yet here
+
+crontab=/etc/cstbox/crontab
+
+task_name="analytics"
+schedule_day="0 2 * * *"
+schedule_week="0 2 * * 1"
+schedule_month="0 2 1 * *"
+
+for period in day week month; do
+    comment="PERFORMER $task_name-$period"
+    if ! grep -csq "$comment" $crontab ; then
+        schedule_name="schedule_$period"
+        schedule=${!schedule_name}
+        user="root"
+        command="python /opt/cstbox/bin/$task_name.py -p $period"
+        logfile="/var/log/cstbox/$task_name-$period.log"
+
+        echo "$schedule $user $command >> $logfile 2>&1 # $comment" >> $crontab
+    fi
+done
