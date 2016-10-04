@@ -13,3 +13,5 @@ fabfile-settings.py
 /fabfile.py
 build/
 dist/
+/.attic/
+/.idea/
