@@ -5,9 +5,10 @@
 crontab=/etc/cstbox/crontab
 
 task_name="analytics"
-schedule_day="0 2 * * *"
-schedule_week="0 2 * * 1"
-schedule_month="0 2 1 * *"
+
+schedule_day="0 2 * * *"        # at 2AM, every day
+schedule_week="0 2 * * 1"       # at 2AM, on Mondays
+schedule_month="0 2 1 * *"      # at 2AM, on the 1st day of the month
 
 for period in day week month; do
     comment="PERFORMER $task_name-$period"
