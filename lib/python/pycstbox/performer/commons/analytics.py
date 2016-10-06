@@ -141,9 +141,6 @@ class AbstractAnalyzer(object):
             '%s analyzing period [%s, %s]', self.__class__.__name__, self._time_frame.start, self._time_frame.end
         )
 
-        self.logger.info('creating outputs')
-        self._outputs = {name: None for name in self.create_outputs()}
-
         self.logger.info('loading inputs')
         inputs = self.load_inputs(TimeFrame(self._time_frame.start, self._time_frame.end))
         if inputs:
@@ -151,6 +148,9 @@ class AbstractAnalyzer(object):
                 self.logger.info('plotting input signal(s)')
                 labels, signals = zip(*inputs.iteritems())
                 self.save_signal_plots(signals, labels)
+
+            self.logger.info('creating outputs')
+            self._outputs = {name: None for name in self.create_outputs()}
 
             self.logger.info('computing indicator(s)')
             self.process_inputs(inputs)
@@ -164,7 +164,7 @@ class AbstractAnalyzer(object):
             self.logger.warn('no matching data')
 
     def process_inputs(self, inputs):
-        """ The heart of the analyzer, which do the real job.
+        """ The heart of the analyzer, which does the real job.
 
         Concrete classes must define this method.
 
