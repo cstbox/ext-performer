@@ -15,60 +15,76 @@ class PDWConnectorMixin(object):
         self._report_to = report_to
         self._dry_run = dry_run
 
-    def create_pdw_variable_if_needed(self, site_id, var_name, var_meta=None):
+    def create_pdw_variable_if_needed(self, site_id, var_name, var_meta=None, known_vars=None):
         """ Declares a variable in the PDW if not already there.
 
         :param int site_id: the id of the site
         :param str var_name: the name of the variable
         :param dict var_meta: meta data of the variable (refer to PDW services specifications, part 5.1 for details)
+        :param list known_vars: the list of known variables. If passed, the PDW will not be queried for it.
+        :return: the updated known variables list
+        :rtype: list
         """
-        self._logger.info("getting existing variables list for site id=%s", site_id)
-        reply = requests.get(self.URL % {"site_id": site_id, 'path': 'varlist'})
-        try:
-            reply.raise_for_status()
-        except requests.HTTPError as e:
-            self._logger.error(e)
-        else:
-            var_list = reply.json()['varlist']
-            if var_list:
-                self._logger.info('--> %d variable(s) already defined', len(var_list))
+        if not known_vars:
+            self._logger.info("getting existing variables list for site id=%s", site_id)
+            reply = requests.get(self.URL % {"site_id": site_id, 'path': 'varlist'})
+            try:
+                reply.raise_for_status()
+            except requests.HTTPError as e:
+                self._logger.error(e)
+                return None
             else:
-                self._logger.warn('--> no variable defined yet')
+                known_vars = reply.json()['varlist']
+                if known_vars:
+                    self._logger.info('--> %d variable(s) already defined', len(known_vars))
+                else:
+                    self._logger.warn('--> no variable defined yet')
 
-            if var_name not in var_list:
-                self._logger.info("%s does not exist yet for site id=%d", var_name, site_id)
-                if not var_meta:
-                    msg = 'cannot define variable (meta data not provided)'
-                    self._logger.error(msg)
-                    raise ValueError(msg)
+        else:
+            if not isinstance(known_vars, list):
+                raise TypeError('known_vars parameter type mismatch (expected: list, received: %s)' % type(known_vars))
 
-                try:
-                    definition = [{
-                        'name': var_name,
-                        'type': var_meta['type'],
-                        'unit': var_meta.get('unit', 'none'),
+            self._logger.info("using passed known variables list (len=%d)", len(known_vars))
 
-                    }]
-                except KeyError as e:
-                    msg = 'missing property "%s" in variable meta data' % e
-                    self._logger.error(msg)
-                    raise ValueError(msg)
+        if var_name not in known_vars:
+            self._logger.info("%s does not exist yet for site id=%d", var_name, site_id)
+            if not var_meta:
+                msg = 'cannot define variable (meta data not provided)'
+                self._logger.error(msg)
+                raise ValueError(msg)
+
+            try:
+                definition = [{
+                    'name': var_name,
+                    'type': var_meta['type'],
+                    'unit': var_meta.get('unit', 'none'),
+
+                }]
+            except KeyError as e:
+                msg = 'missing property "%s" in variable meta data' % e
+                self._logger.error(msg)
+                raise ValueError(msg)
+
+            else:
+                request = self.URL % {"site_id": site_id, 'path': 'vardefs'}
+                if not self._dry_run:
+                    reply = requests.put(request, data=definition)
+                    try:
+                        reply.raise_for_status()
+                    except requests.HTTPError as e:
+                        msg = 'variable creation failure (%s:%s) : %s' % (site_id, var_name, e)
+                        self._logger.error(msg)
+                        raise PDWConnectorError(msg)
+                    else:
+                        self._logger.info('variable created (%s:%s)', site_id, var_name)
 
                 else:
-                    request = self.URL % {"site_id": site_id, 'path': 'vardefs'}
-                    if not self._dry_run:
-                        reply = requests.put(request, data=definition)
-                        try:
-                            reply.raise_for_status()
-                        except requests.HTTPError as e:
-                            msg = 'variable creation failure (%s:%s) : %s' % (site_id, var_name, e)
-                            self._logger.error(msg)
-                            raise PDWConnectorError(msg)
-                        else:
-                            self._logger.info('variable created (%s:%s)', site_id, var_name)
+                    self._simulate(request, definition)
 
-                    else:
-                        self._simulate(request, definition)
+            # update the known variables list
+            known_vars.append(var_name)
+
+        return known_vars
 
     def _simulate(self, request, data=None):
         self._logger.info('DRY RUN: simulating PUT request : req=%s data=%s', request, data)
