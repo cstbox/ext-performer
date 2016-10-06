@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
+import os
 import json
 import importlib
 import datetime
 import logging
 
 from pycstbox import log
-from pycstbox.performer.analytics.base import PeriodicAnalyzer, AnalyzerError
+from pycstbox.performer.commons.analytics import PeriodicAnalyzer, AnalyzerError
 
 __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 
 class Runner(object):
-    def __init__(self, period=PeriodicAnalyzer.PERIOD_DAY, logger=None):
+    def __init__(self, config_path, period=PeriodicAnalyzer.PERIOD_DAY, logger=None):
+        self.config_path = config_path
         self.period = period
         
         self.logger = logger or log.getLogger(self.__class__.__name__)
@@ -21,15 +23,37 @@ class Runner(object):
         self.log_error = self.logger.error
         self.log_exception = self.logger.exception
 
-    def prepare_analyzers(self, cfg_data):
+    def prepare_analyzers(self):
         analyzers = []
+
+        try:
+            self.log_info('loading configuration from %s', self.config_path)
+            cfg_data = json.load(open(self.config_path))
+
+        except Exception as e:
+            raise AnalyzerError("configuration error : %s" % e)
 
         defaults = cfg_data.get('defaults', {})
         default_analyzer_params = defaults.get('analyzer_params', {}) if defaults else {}
         if default_analyzer_params:
             self.log_info('default analyzers parameters : %s', default_analyzer_params)
 
-        cfg_analyzers_package = defaults.get("cfg_analyzers_package", None)
+        cfg_analyzers_module = defaults.get("analyzers_module", None)
+
+        try:
+            imported_config = cfg_data['import']
+        except KeyError:
+            imported_analyzers = {}
+        else:
+            imported_config_path = os.path.join(os.path.dirname(self.config_path), imported_config)
+            if os.path.exists(imported_config_path):
+                self.log_info('importing definitions from %s', imported_config_path)
+                try:
+                    imported_analyzers = json.load(open(imported_config_path))
+                except ValueError as e:
+                    raise AnalyzerError('invalid imported definitions (%s)' % e)
+            else:
+                raise AnalyzerError('imported configuration file not found: %s' % imported_config_path)
 
         for cfg_item in cfg_data['analyzers']:
             name = cfg_item['name']
@@ -37,10 +61,26 @@ class Runner(object):
             if not cfg_item.get('skip', False):
                 self.log_info('configuring analyzer %s', name)
 
-                analyzer_cfg = cfg_item['analyzer']
+                ref = cfg_item.get('ref', None)
+                if ref:
+                    try:
+                        effective_cfg = imported_analyzers[ref]
+                    except KeyError:
+                        raise AnalyzerError('unresolved definition reference: %s' % ref)
+                    effective_cfg.update(cfg_item)
+                else:
+                    effective_cfg = cfg_item
+
+                analyzer_cfg = effective_cfg['analyzer']
                 cfg_fqcn = analyzer_cfg['class']
-                if cfg_analyzers_package:
-                    cfg_fqcn = '.'.join(cfg_analyzers_package, cfg_fqcn)
+                if '.' not in cfg_fqcn:
+                    # using not fully qualified class names => we need the parent module
+                    if cfg_analyzers_module:
+                        cfg_fqcn = cfg_analyzers_module + '.' + cfg_fqcn
+                    else:
+                        raise AnalyzerError(
+                            'relative class name used (%s) and analyzers_module not configured' % cfg_fqcn
+                        )
 
                 analyzer_fqcn = cfg_fqcn.split('.')
                 module_name = '.'.join(analyzer_fqcn[:-1])
@@ -61,8 +101,8 @@ class Runner(object):
                                 "invalid analyzer implementation : missing Indicator nested class definition"
                             )
                         else:
-                            indicator_params = {k: cfg_item[k] for k in ('name', 'label', 'description')}
-                            indicator_params.update(cfg_item['indicator_params'])
+                            indicator_params = {k: effective_cfg[k] for k in ('name', 'label', 'description')}
+                            indicator_params.update(effective_cfg['indicator_params'])
                             if self.logger.isEnabledFor(logging.INFO):
                                 self.log_info('.. indicator parameters :')
                                 for k, v in (
@@ -137,39 +177,34 @@ class Runner(object):
         logger = log.getLogger('analytics-%s' % args.period)
         log.set_loglevel_from_args(logger, args)
 
+        def die(msg):
+            logger.error(msg)
+            return msg
+
         try:
-            logger.info('loading configuration from %s', args.config_path)
-            cfg_data = json.load(open(args.config_path))
+            logger.info('creating runner')
+            runner = Runner(
+                config_path=args.config_path,
+                period=PeriodicAnalyzer.period_name_to_id(args.period)
+            )
+
+            logger.info('preparing analyzers')
+            analyzers = runner.prepare_analyzers()
+
+        except AnalyzerError as e:
+            return die("analysis preparation error : %s" % e)
 
         except Exception as e:
-            logger.error("configuration error : %s" % e)
-            return 1
+            return die("unexpected error : %s" % e)
 
         else:
             try:
-                logger.info('creating runner')
-                runner = Runner(period=PeriodicAnalyzer.period_name_to_id(args.period))
-
-                logger.info('preparing analyzers')
-                analyzers = runner.prepare_analyzers(cfg_data)
+                logger.info('running analyzers')
+                runner.execute_analyzers(analyzers, args.computation_date)
 
             except AnalyzerError as e:
-                logger.error("analysis preparation error : %s" % e)
-                return 1
-
-            except Exception as e:
-                logger.error("unexpected error : %s" % e)
-                return 1
+                return die("analyze execution error : %s" % e)
 
             else:
-                try:
-                    logger.info('running analyzers')
-                    runner.execute_analyzers(analyzers, args.computation_date)
-
-                except AnalyzerError as e:
-                    logger.error("analyze execution error : %s" % e)
-                    return 1
-
-                else:
-                    logger.info('completed without error')
-                    return 0
+                logger.info('completed without error')
+                return 0
