@@ -2,5 +2,5 @@
 
 # removes our analyze tasks
 
-crontab=/tmp/cstbox-crontab
+crontab=/etc/cstbox/crontab
 sed -i "/# PERFORMER analytics/d" $crontab
