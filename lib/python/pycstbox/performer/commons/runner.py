@@ -7,6 +7,8 @@ import datetime
 import logging
 
 from pycstbox import log
+from pycstbox.config import CONFIG_DIR
+
 from pycstbox.performer.commons.analytics import PeriodicAnalyzer, AnalyzerError
 
 __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
@@ -14,7 +16,15 @@ __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 class Runner(object):
     def __init__(self, config_path, period=PeriodicAnalyzer.PERIOD_DAY, logger=None):
+        if not config_path:
+            raise ValueError('missing config_path parameter')
+        if not os.path.isabs(config_path):
+            config_path = os.path.join(CONFIG_DIR, config_path)
         self.config_path = config_path
+
+        if period is None:
+            raise ValueError('missing period parameter')
+
         self.period = period
         
         self.logger = logger or log.getLogger(self.__class__.__name__)
