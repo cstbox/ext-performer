@@ -16,7 +16,7 @@ for period in day week month; do
         schedule_name="schedule_$period"
         schedule=${!schedule_name}
         user="root"
-        command="python /opt/cstbox/bin/$task_name.py -p $period"
+        command="python /opt/cstbox/bin/$task_name.py -p $period --config analytics-$period.cfg"
         logfile="/var/log/cstbox/$task_name-$period.log"
 
         echo "$schedule $user $command >> $logfile 2>&1 # $comment" >> $crontab
