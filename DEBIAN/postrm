@@ -3,4 +3,4 @@
 # removes our analyze tasks
 
 crontab=/etc/cstbox/crontab
-sed -i "/# PERFORMER analytics/d" $crontab
+sed -i "/# PERFORMER /d" $crontab

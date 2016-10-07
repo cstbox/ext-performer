@@ -4,7 +4,7 @@
 
 crontab=/etc/cstbox/crontab
 
-task_name="analytics"
+task_name="periodic-analytics"
 
 schedule_day="0 2 * * *"        # at 2AM, every day
 schedule_week="0 2 * * 1"       # at 2AM, on Mondays
