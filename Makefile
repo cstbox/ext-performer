@@ -12,5 +12,8 @@ include $(CSTBOX_DEVEL_HOME)/lib/makefile-dist.mk
 
 copy_files: \
 	copy_bin_files \
-	copy_python_files
+	copy_python_files \
+	copy_temp_whl_files
 
+copy_temp_whl_files:
+	cp -ar ./res/tmp/ $(BUILD_DIR)

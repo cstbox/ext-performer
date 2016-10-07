@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# install pre-requisites (Python packages)
+pip install /tmp/cstbox-whl/*.whl
+
 # schedules our analyze tasks if not yet here
 
 crontab=/etc/cstbox/crontab
@@ -16,7 +19,7 @@ for period in day week month; do
         schedule_name="schedule_$period"
         schedule=${!schedule_name}
         user="root"
-        command="python /opt/cstbox/bin/$task_name.py -p $period --config analytics-$period.cfg"
+        command="python /opt/cstbox/bin/$task_name.py -p $period --config /etc/cstbox/analytics-$period.cfg"
         logfile="/var/log/cstbox/$task_name-$period.log"
 
         echo "$schedule $user $command >> $logfile 2>&1 # $comment" >> $crontab
