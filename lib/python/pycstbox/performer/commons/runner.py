@@ -119,7 +119,7 @@ class Runner(object):
                                         (k, v) for k, v in indicator_params.iteritems()
                                         if k not in ('name', 'description', 'label')
                                 ):
-                                    self.log_info('.. + %s = %s', k, v)
+                                    self.log_info('   + %s = %s', k, v)
 
                             try:
                                 indicator = analyzer_indicator_class(**indicator_params)

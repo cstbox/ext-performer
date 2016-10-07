@@ -68,6 +68,14 @@ class AbstractIndicator(object):
         self.description = description
         self.inputs = None
 
+    def check_mandatory_parameters(self, names):
+        missing = []
+        for name in names:
+            if not hasattr(self, name):
+                missing.append(name)
+        if missing:
+            raise AnalyzerError('missing mandatory parameter(s): %s' % (', '.join(missing)))
+
     def __str__(self):
         return self.name
 
@@ -161,7 +169,7 @@ class AbstractAnalyzer(object):
             else:
                 self.store_single_point_outputs(outputs_timestamp)
         else:
-            self.logger.warn('no matching data')
+            self.logger.warn('cannot compute indicator : missing required input data')
 
     def process_inputs(self, inputs):
         """ The heart of the analyzer, which does the real job.
