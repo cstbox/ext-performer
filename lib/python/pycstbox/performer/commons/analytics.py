@@ -71,10 +71,10 @@ class AbstractIndicator(object):
     def check_mandatory_parameters(self, names):
         missing = []
         for name in names:
-            if not hasattr(self, name):
+            if not getattr(self, name, None):
                 missing.append(name)
         if missing:
-            raise AnalyzerError('missing mandatory parameter(s): %s' % (', '.join(missing)))
+            raise AnalyzerError('missing mandatory parameters [%s]' % (', '.join(missing)))
 
     def __str__(self):
         return self.name

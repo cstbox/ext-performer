@@ -124,7 +124,8 @@ class Runner(object):
                             try:
                                 indicator = analyzer_indicator_class(**indicator_params)
                             except Exception as e:
-                                raise AnalyzerError('indicator creation error : %s' % e)
+                                self.logger.error(e)
+                                raise AnalyzerError('indicator creation error')
                             else:
                                 analyzer_params = default_analyzer_params.copy()
                                 analyzer_params.update(analyzer_cfg.get('params', {}))
@@ -136,6 +137,9 @@ class Runner(object):
 
                 except ImportError as e:
                     raise AnalyzerError('error importing module %s (%s)' % (module_name, e))
+
+                except AnalyzerError:
+                    raise
 
                 except Exception as e:
                     raise AnalyzerError('unexpected error : %s' % e)
@@ -188,7 +192,7 @@ class Runner(object):
         log.set_loglevel_from_args(logger, args)
 
         def die(msg):
-            logger.error(msg)
+            logger.fatal(msg)
             return msg
 
         try:
@@ -202,7 +206,7 @@ class Runner(object):
             analyzers = runner.prepare_analyzers()
 
         except AnalyzerError as e:
-            return die("analysis preparation error : %s" % e)
+            return die("analysis preparation error (%s)" % e)
 
         except Exception as e:
             return die("unexpected error : %s" % e)
@@ -213,7 +217,8 @@ class Runner(object):
                 runner.execute_analyzers(analyzers, args.computation_date)
 
             except AnalyzerError as e:
-                return die("analyze execution error : %s" % e)
+                logger.error(e)
+                return die("analyze execution error (%s)" % e)
 
             else:
                 logger.info('completed without error')
