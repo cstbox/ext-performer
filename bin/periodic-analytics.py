@@ -6,8 +6,8 @@ import datetime
 from argparse import ArgumentTypeError
 
 from pycstbox.cli import get_argument_parser, add_config_file_option_to_parser
-from pycstbox.performer.analytics.base import PeriodicAnalyzer
-from pycstbox.performer.analytics.runner import Runner
+from pycstbox.performer.commons.analytics import PeriodicAnalyzer
+from pycstbox.performer.commons.runner import Runner
 
 __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
