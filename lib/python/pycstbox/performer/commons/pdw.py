@@ -30,7 +30,7 @@ class PDWConnectorMixin(object):
             reply = requests.get(self.URL % {"site_id": site_id, 'path': 'varlist'})
             try:
                 reply.raise_for_status()
-            except requests.HTTPError as e:
+            except (requests.HTTPError, requests.ConnectionError) as e:
                 self._logger.error(e)
                 return None
             else:
