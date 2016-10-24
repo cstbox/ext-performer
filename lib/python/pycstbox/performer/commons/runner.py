@@ -150,8 +150,7 @@ class Runner(object):
         return analyzers
 
     def execute_analyzers(self, analyzers, computation_date=None):
-        computation_date = computation_date or datetime.datetime.utcnow().date()
-        self.log_info('computation date : %s', computation_date.strftime("%Y-%m-%d"))
+        computation_date = computation_date or datetime.datetime.utcnow()
         executed = 0
         in_error = 0
         for analyzer_class, analyzer_params, indicator in analyzers:
