@@ -3,6 +3,7 @@
 import requests
 import zipfile
 import cStringIO
+import json
 
 __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
@@ -58,7 +59,6 @@ class PDWConnectorMixin(object):
                     'name': var_name,
                     'type': var_meta['type'],
                     'unit': var_meta.get('unit', 'none'),
-
                 }]
             except KeyError as e:
                 msg = 'missing property "%s" in variable meta data' % e
@@ -68,15 +68,48 @@ class PDWConnectorMixin(object):
             else:
                 request = self.URL % {"site_id": site_id, 'path': 'vardefs'}
                 if not self._dry_run:
-                    reply = requests.put(request, data=definition)
-                    try:
-                        reply.raise_for_status()
-                    except requests.HTTPError as e:
-                        msg = 'variable creation failure (%s:%s) : %s' % (site_id, var_name, e)
-                        self._logger.error(msg)
-                        raise PDWConnectorError(msg)
+                    if True:
+                        reply = requests.put(
+                            request,
+                            json=definition,
+                            headers={
+                                "Content-Type": "application/json",
+                                "Content-Disposition": "attachment;filename=vardefs.json"
+                            }
+                        )
+                        try:
+                            reply.raise_for_status()
+                        except requests.HTTPError as e:
+                            msg = 'variable creation failure (%s:%s) : %s' % (site_id, var_name, e)
+                            self._logger.error(msg)
+                            raise PDWConnectorError(msg)
+                        else:
+                            self._logger.info('variable created (%s:%s)', site_id, var_name)
+
                     else:
-                        self._logger.info('variable created (%s:%s)', site_id, var_name)
+                        # TODO remove temp workaround if validated
+                        import subprocess, os
+
+                        tmp_file = '/tmp/vardefs.json'
+                        with open(tmp_file, 'w') as fp:
+                            json.dump(definition, fp)
+                        try:
+                            subprocess.check_call(
+                                'curl -X PUT '
+                                '-H "Content-Disposition:attachment;filename=vardefs.json" '
+                                '-H "Content-Type:application/json" '
+                                '-T /tmp/vardefs.json ' +
+                                request,
+                                shell=True
+                            )
+                        except subprocess.CalledProcessError as e:
+                            msg = 'variable creation failure (%s:%s) : %s' % (site_id, var_name, e)
+                            self._logger.error(msg)
+                            raise PDWConnectorError(msg)
+                        else:
+                            self._logger.info('variable created (%s:%s)', site_id, var_name)
+                        finally:
+                            os.remove(tmp_file)
 
                 else:
                     self._simulate(request, definition)
@@ -106,7 +139,7 @@ class PDWConnectorMixin(object):
         sio = cStringIO.StringIO()
         zf = zipfile.ZipFile(sio, 'w', zipfile.ZIP_DEFLATED)
         for name, value in points:
-            zf.writestr(name, '%s\t%s\n' % (timestamp, value))
+            zf.writestr(name + ".tsv", '%s\t%s\n' % (timestamp.isoformat(), value))
         zf.close()
         sio.seek(0)
 
@@ -120,7 +153,8 @@ class PDWConnectorMixin(object):
                     'file': sio
                 },
                 headers={
-                    "Content-Type": "application/zip"
+                    "Content-Type": "application/zip",
+                    "Content-Disposition": "attachment;filename=temp.zip"
                 }
             )
             try:
