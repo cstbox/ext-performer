@@ -9,9 +9,9 @@ crontab=/etc/cstbox/crontab
 
 task_name="periodic-analytics"
 
-schedule_day="0 2 * * *"        # at 2AM, every day
-schedule_week="0 2 * * 1"       # at 2AM, on Mondays
-schedule_month="0 2 1 * *"      # at 2AM, on the 1st day of the month
+schedule_day="0 12 * * *"        # at 12AM, every day (12AM used to work around the fact that WOOPA box is off at night)
+schedule_week="0 12 * * 1"       # at 12AM, on Mondays
+schedule_month="0 12 1 * *"      # at 12AM, on the 1st day of the month
 
 for period in day week month; do
     comment="PERFORMER $task_name-$period"
