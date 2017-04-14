@@ -169,7 +169,7 @@ class AbstractAnalyzer(object):
             else:
                 self.store_single_point_outputs(outputs_timestamp)
         else:
-            self.logger.warn('cannot compute indicator : missing required input data')
+            self.logger.warn('cannot compute indicator : no input data')
 
     def process_inputs(self, inputs):
         """ The heart of the analyzer, which does the real job.
