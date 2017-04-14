@@ -9,7 +9,7 @@ __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 
 class PDWConnectorMixin(object):
-    URL = "http://pdw.performer-project.eu/api/dss/sites/%(site_id)s/%(path)s"
+    URL = "http://pdw.performerproject.eu/api/dss/sites/%(site_id)s/%(path)s"
 
     def __init__(self, logger, report_to=None, dry_run=False, **kwargs):
         self._logger = logger.getChild('pdw')
