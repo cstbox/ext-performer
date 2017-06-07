@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import requests
+import datetime
 import zipfile
 import cStringIO
 import json
@@ -10,6 +11,7 @@ __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 class PDWConnectorMixin(object):
     URL = "http://pdw.performerproject.eu/api/dss/sites/%(site_id)s/%(path)s"
+    LOCAL_STORE = "/var/db/cstbox/pdw.dat"
 
     def __init__(self, logger, report_to=None, dry_run=False, **kwargs):
         self._logger = logger.getChild('pdw')
@@ -137,11 +139,21 @@ class PDWConnectorMixin(object):
         var_names, _ = zip(*points)
 
         sio = cStringIO.StringIO()
-        zf = zipfile.ZipFile(sio, 'w', zipfile.ZIP_DEFLATED)
-        for name, value in points:
-            zf.writestr(name + ".tsv", '%s\t%s\n' % (timestamp.isoformat(), value))
-        zf.close()
-        sio.seek(0)
+        try:
+            zf = zipfile.ZipFile(sio, 'w', zipfile.ZIP_DEFLATED)
+            try:
+                timestamp = timestamp or datetime.datetime.utcnow().date()
+                ts_iso = timestamp.isoformat()
+                with open(self.LOCAL_STORE, 'a') as fp:
+                    for name, value in points:
+                        zf.writestr(name + ".tsv", '%s\t%s\n' % (ts_iso, value))
+                        fp.write("%s\t%s\t%s\n" % (name, ts_iso, value))
+
+            finally:
+                zf.close()
+
+        finally:
+            sio.seek(0)
 
         self._logger.info("storing points for site id=%s: %s", site_id, [(name, value) for name, value in points])
 
